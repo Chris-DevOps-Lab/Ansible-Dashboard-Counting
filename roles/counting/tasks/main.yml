@@ -1,0 +1,57 @@
+---
+- name: Create counting application directory
+  ansible.builtin.file:
+    path: "{{ counting_app_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Create Python virtual environment
+  ansible.builtin.command:
+    cmd: "python3 -m venv {{ counting_app_dir }}/venv"
+    creates: "{{ counting_app_dir }}/venv/bin/python"
+
+- name: Install Python dependencies
+  ansible.builtin.pip:
+    name:
+      - flask
+      - gunicorn
+    virtualenv: "{{ counting_app_dir }}/venv"
+
+- name: Deploy counting Flask application
+  ansible.builtin.copy:
+    src: app.py
+    dest: "{{ counting_app_dir }}/app.py"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart counting service
+
+- name: Deploy counting systemd unit
+  ansible.builtin.template:
+    src: counting.service.j2
+    dest: "/etc/systemd/system/{{ counting_service_name }}.service"
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart counting service
+
+- name: Ensure counting service is enabled and started
+  ansible.builtin.systemd:
+    name: "{{ counting_service_name }}"
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Wait for counting API
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ counting_port }}/health"
+    method: GET
+    status_code: 200
+  register: counting_health
+  retries: 10
+  delay: 2
+  until: counting_health.status == 200

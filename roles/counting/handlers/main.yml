@@ -1,0 +1,11 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Restart counting service
+  ansible.builtin.systemd:
+    name: "{{ counting_service_name }}"
+    state: restarted
+    enabled: true
+    daemon_reload: true

@@ -1,0 +1,28 @@
+.vagrant/
+*.retry
+__pycache__/
+*.pyc
+.DS_Store
+
+# Logs
+*.log
+
+# Environment / secrets
+.env
+.env.*
+*.pem
+*.key
+
+# SSH keys
+.ssh/
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+
+# Ansible temporary files
+*.retry.vagrant/
+*.retry
+__pycache__/
+*.pyc
+.DS_Store

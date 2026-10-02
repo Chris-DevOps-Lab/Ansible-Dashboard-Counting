@@ -1,0 +1,65 @@
+---
+- name: Install nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+    update_cache: true
+
+- name: Remove default nginx site
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Restart nginx
+
+- name: Create dashboard web directory
+  ansible.builtin.file:
+    path: /var/www/dashboard
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0755"
+
+- name: Deploy dashboard page
+  ansible.builtin.template:
+    src: index.html.j2
+    dest: /var/www/dashboard/index.html
+    owner: www-data
+    group: www-data
+    mode: "0644"
+  notify: Restart nginx
+
+- name: Deploy nginx dashboard config
+  ansible.builtin.template:
+    src: dashboard.conf.j2
+    dest: /etc/nginx/sites-available/dashboard.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart nginx
+
+- name: Enable dashboard nginx site
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/dashboard.conf
+    dest: /etc/nginx/sites-enabled/dashboard.conf
+    state: link
+  notify: Restart nginx
+
+- name: Validate nginx configuration
+  ansible.builtin.command: nginx -t
+  changed_when: false
+
+- name: Ensure nginx is enabled and started
+  ansible.builtin.systemd:
+    name: nginx
+    enabled: true
+    state: started
+
+- name: Wait for dashboard
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ dashboard_port }}/"
+    method: GET
+    status_code: 200
+  register: dashboard_health
+  retries: 10
+  delay: 2
+  until: dashboard_health.status == 200
